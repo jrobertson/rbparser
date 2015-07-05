@@ -35,10 +35,8 @@ class RbParser
       [:end]
     end
 
-    parse /def\s+(\w+)\s*\((?:\)|([^\)]+)\))/ do |mthdnme, argslst|      
-      r = [:def, mthdnme]
-      r << argslst if argslst
-      r
+    parse /def\s+(\w+)\s*\((?:\)|([^\)]+\)))/ do |mthdnme, argslst|      
+      [:def, mthdnme, argslst]
     end
 
     get /(\w+)\(([^\)]+)\)/ do |mthdnme, argslst|
@@ -73,20 +71,17 @@ class RbParser
       case id
       when :class
 
-        name, baseclass = remaining
-        r << [:class, name]
+        r << [:class]
         r.last.concat treeize(a)
 
       when :def
 
-        name, *args = remaining
-        r << [:def, name.to_sym, args]
+        r << [:def]
         r.last.concat treeize(a)
 
       when :method
-        
-        name, *args = remaining
-        r << [:method_call, name.to_sym, args]
+
+        r << [:method_call]
 
       when :end
 
