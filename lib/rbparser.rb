@@ -22,6 +22,10 @@ class RbParser
   private  
 
   def expressions(params) 
+    
+    parse /#(.*)/ do |comment|
+      [:comment, comment]
+    end    
 
     parse /if (.*) then/ do |condtn|
       [:if, condtn]
@@ -41,10 +45,33 @@ class RbParser
       r
     end
 
-    get /(\w+)\(([^\)]+)\)/ do |mthdnme, argslst|
+    parse /(\w+)\(([^\)]+)\)/ do |mthdnme, argslst|
       [:method, mthdnme, argslst]
     end
+    
+    parse /case\s+(\w+)/ do |arg|
+      [:case, arg]
+    end
 
+    parse /when\s+(.*)/ do |expression|
+      [:when, expression]
+    end
+    
+    parse /else/ do 
+      [:else]
+    end   
+
+    parse /elsif\s+(.*)/ do |cndtn|
+      [:elsif, cndtn]
+    end
+
+    parse /(\w+)\s+([^\)]+)\s+/ do |mthdnme, argslst|
+      [:method, mthdnme, argslst]
+    end    
+    
+    parse /.*/ do
+      [:blankline]
+    end
   end
 
   alias parse get
@@ -54,11 +81,11 @@ class RbParser
   def scan_lines(s)
 
     a = s.lines.inject([]) do |r,line|
-
-      line.strip.length > 0 ? r << scan_line(line) : r
+      #puts 'line: ' + line.inspect
+      line.strip.length > 0 ? r << scan_line(line) : r << [:blankline]
 
     end
-
+    #puts 'a: ' + a.inspect
     treeize a
   end
 
@@ -83,6 +110,17 @@ class RbParser
         r << [:def, name.to_sym, args]
         r.last.concat treeize(a)
 
+      when :case
+
+        expr = remaining.first
+        r << [:case, expr]
+        r.last.concat treeize(a)
+
+      when :when
+
+        expr = remaining.first
+        r << [:when, expr]        
+        
       when :method
         
         name, *args = remaining
@@ -91,6 +129,11 @@ class RbParser
       when :end
 
        return r
+       
+      when :comment
+        r << [:comment, remaining.join]
+        
+      when :blankline then r << [:blankline]
 
       end
 
